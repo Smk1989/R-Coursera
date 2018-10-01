@@ -65,7 +65,7 @@ kable(summary1)
 ggplot(data=ames_train,aes(y=price,x=Quality.Category))+geom_boxplot(color = "dark green",fill="lime green",alpha = 0.5)+labs(title="BoxPlots of Price based on Overall Quality")+theme(plot.title = element_text(hjust = 0.5))+xlab("Quality Category")+ylab("Price")
 ```
 
-While it is obvious that quality is a big deciding factor in the pricing of a house, I wanted to know the exact effect it has on the price. We can figure out two things from the side by side boxplots.
+While it is obvious that overall quality of materials and finish is a big deciding factor in the pricing of a house, I wanted to know the exact effect it has on the price. We can figure out two things from the side by side boxplots.
 
 1. The median price of houses whose quality is Very good i.e rated 9 or 10 is almost double of the median prices of houses which are rated Good i.e. 7 or 8. This difference in median prices is much more if you see the difference between medians of Good, Average and Poor quality houses.
 
@@ -89,6 +89,32 @@ summary2<-ames_train %>% select(price,Neighborhood) %>% group_by(Neighborhood) %
 kable(summary2)
 ```
 
+The above plot and numerical summary indicate, that StoneBR is the most expensive neighbourhood with the median price of 340691 followed closely by NridgHT. MeadowV on the other hand is the least expensive neighbourhood. So, if two identical houses are built in StoneBR and MeadowV, the builder can charge a much higher price for the house in StoneBR as compared to MeadowV.
+
+The standard deviation and IQR suggests that StoneBR is the most heterogenous neighbourhood when it comes to price of houses. 
+
+
+Similar to Overall Quality of a house in terms of material and finish, I also want to see the effect of the Overall condition on the price of a house. 
+
+Catgorizing condition based on codebook provided
+
+```{r}
+ames_train_cond<-ames_train %>% mutate(Condition_category=ifelse(Overall.Cond>8,"Excellent",ifelse(Overall.Cond>6,"Good",ifelse(Overall.Cond>4,"Average",ifelse(Overall.Cond>2,"Fair","Poor")))))
+```
+
+```{r}
+ggplot(data=ames_train_cond,aes(y=price,x=Condition_category))+geom_boxplot(color = "dark green",fill="lime green",alpha = 0.5)+labs(title="BoxPlots of Price based on Overall Condition")+theme(plot.title = element_text(hjust = 0.5))+xlab("Condition Category")+ylab("Price")
+```
+
+Contrary to the results of Price vs Overall Quality of a house, the plot of price vs Overall Condition presents a different story. The median price and the IQR of a house whose overall condition is Average is much more than all other categories. The outliers are also much higher and more for Average category houses.
+
+This particular trend can be attributed to the following
+
+1. Other conditions such as location and Build quality plays a much higher role in the price of a house than the Overall Condition. What this means is that buyers are willing to pay a higher price for a house whose condition is average or satisfactory as long as it is in a good locality and with a good built and quality. This also shows that condition starts playing an important role in the price, the moment it drops below average level.
+
+2. One more thing that can be a reason for this trend is that buyers would be willing to pay a higher price if they are visually pleased with the house i.e Quality and finish of the house and the location. For instance, Buyers would be willing to pay a high price for a house that they are visually pleased with even if the condition of AC is not excellent. In some cases, they would not even notice a poor condition, if they are already pleased with the build quality and finish of the house and the location.
+
+
 
 
 * * *
@@ -102,12 +128,26 @@ Based on your EDA, select *at most* 10 predictor variables from “ames_train”
 
 * * *
 
-NOTE: Write your written response to section 2.1 here. Delete this note before you submit your work.
+Based on the EDA plot, I have select Overall.Qual as well as Overall.Cond as two variables that affect the price of a house. Note : We saw how overall.Cond was not significant when the condition was average/good. However, it has a significant role when it is poor/average in deciding the price of a house. Apart from this, Neighborhood is another variable that has been used in the initial model. The EDA plots show a very strong relationship of price with the neighborhood a house belongs to. The three other variables, area, bedroom.AbvGr and TotRms.AbvGrd have been used as it is obvious that the price of a house has a direct relation with the area/total no of rooms/bedrooms. In other words, The bigger the house, higher is the price. 
+
+
 
 ```{r fit_model}
+initial_model<-lm(log(price)~area+Neighborhood+Overall.Qual+Overall.Cond+Year.Built+Bedroom.AbvGr+TotRms.AbvGrd,data = ames_train)
+summary(initial_model)
 ```
 
+Residuals Plot
+```{r}
+ggplot(data=initial_model,aes(y=.resid,x=.fitted))+geom_point(color="maroon")+geom_hline(yintercept = 0,linetype="dashed",color="dark red")
+```
+
+
 * * *
+
+The summary statistics and Residual plot of the model shows a constant variablility of the residuals. Based on the summary statistics, we can see that almost all variables have a low p-value.(Significance level : 0.05). So, I would say that this model is a good initial model to use as a starting point in building the best model for prediction of house prices. 
+
+Note : I have used log(Price) instead of price in my model as it has a much better variability across the center line at 0 for residuals than using Price directly. For the sake of brevity, I have only shown the plot of residuals for the natural log of price as the predicted variable. 
 
 ### Section 2.2 Model Selection
 
@@ -115,10 +155,32 @@ Now either using `BAS` another stepwise selection procedure choose the "best" mo
 
 * * *
 
-NOTE: Write your written response to section 2.2 here. Delete this note before you submit your work.
+<B>Model selection using Stepwise backward selection</B>
+
+Summary of Initial Model
 
 ```{r model_select}
+summary(initial_model)
 ```
+
+Based on this, we will eliminate TotRms.AbvGrd variable as it has the p-value of 0.358610 which is very high compared to the significance level of 0.05. 
+
+```{r}
+initial_model<-lm(formula = log(price) ~ area + Neighborhood + Overall.Qual + 
+    Overall.Cond + Year.Built + Bedroom.AbvGr, 
+    data = ames_train)
+model_sum<-summary(initial_model)
+model_sum$adj.r.squared
+model_sum
+```
+
+Using BAS modelling technique
+
+```{r}
+initial_model_bas<-bas.lm(log(price) ~ area + Neighborhood + Overall.Qual+Overall.Cond + Year.Built + Bedroom.AbvGr + TotRms.AbvGrd,data=ames_train,prior="BIC",modelprior = uniform())
+plot(initial_model_bas)
+```
+
 
 * * *
 

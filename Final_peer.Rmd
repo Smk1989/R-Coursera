@@ -16,7 +16,7 @@ As a statistical consultant working for a real estate investment firm, your task
 In order to better assess the quality of the model you will produce, the data have been randomly divided into three separate pieces: a training data set, a testing data set, and a validation data set. For now we will load the training data set, the others will be loaded and used later.
 
 ```{r load, message = FALSE}
-load("ames_train.Rdata")
+load("~/R Coursera/ames_train.Rdata")
 ```
 
 Use the code block below to load any necessary packages
@@ -177,6 +177,12 @@ model_sum
 Using BAS modelling technique
 
 ```{r}
+rm("initial_model")
+rm("ames_train_cond")
+rm("ames")
+rm("summary1")
+rm("summary2")
+rm("calc_quality")
 initial_model_bas<-bas.lm(log(price) ~ area + Neighborhood + Overall.Qual+Overall.Cond + Year.Built + Bedroom.AbvGr + TotRms.AbvGrd,data=ames_train,prior="BIC",modelprior = uniform())
 plot(initial_model_bas)
 ```

@@ -16,7 +16,7 @@ As a statistical consultant working for a real estate investment firm, your task
 In order to better assess the quality of the model you will produce, the data have been randomly divided into three separate pieces: a training data set, a testing data set, and a validation data set. For now we will load the training data set, the others will be loaded and used later.
 
 ```{r load, message = FALSE}
-load("~/R Coursera/ames_train.Rdata")
+load("ames_train.Rdata")
 ```
 
 Use the code block below to load any necessary packages
@@ -166,27 +166,41 @@ summary(initial_model)
 Based on this, we will eliminate TotRms.AbvGrd variable as it has the p-value of 0.358610 which is very high compared to the significance level of 0.05. 
 
 ```{r}
-initial_model<-lm(formula = log(price) ~ area + Neighborhood + Overall.Qual + 
+initial_model_Backward<-lm(formula = log(price) ~ area + Neighborhood + Overall.Qual + 
     Overall.Cond + Year.Built + Bedroom.AbvGr, 
     data = ames_train)
-model_sum<-summary(initial_model)
+model_sum<-summary(initial_model_Backward)
 model_sum$adj.r.squared
 model_sum
 ```
 
-Using BAS modelling technique
+There is not much change in the adjusted R squared and based on the p-value for all coefficient which is much lower than the significance level, we would treat this as the best model after making adjustments to the inital model based on the backward elimination method.
+
+<B>Using BAS modelling technique</B>
+
+Note : For Bayesian modelling, I had to take out Neighbourhood from the coefficient list as including Neighbourhood was making the calculation very resource intensive. I am working on a laptop with only 4 GB of RAM. Since, R loads all the variables into the memory, it was exceeding 4GB causing my R session to crash.(This also points out to one of the drawbacks of R as discussed in R programming course)
 
 ```{r}
-rm("initial_model")
-rm("ames_train_cond")
-rm("ames")
-rm("summary1")
-rm("summary2")
-rm("calc_quality")
-initial_model_bas<-bas.lm(log(price) ~ area + Neighborhood + Overall.Qual+Overall.Cond + Year.Built + Bedroom.AbvGr + TotRms.AbvGrd,data=ames_train,prior="BIC",modelprior = uniform())
+initial_model_bas<-bas.lm(log(price) ~ area + Overall.Qual+Overall.Cond + Year.Built + Bedroom.AbvGr + TotRms.AbvGrd,data=ames_train,prior="BIC",modelprior = uniform())
 plot(initial_model_bas)
 ```
 
+Even though we were not able to include neighbourhood vraiable in our model due to hardware limitations, I have included the model in analysis in order to see how the other coefficients in Bayesian modelling compare with the other models.
+
+The Marginal probability model and the summary of the bayesian model show that TotRms.AbvGrd coefficient should not be included in our final model.This is similar to the model that we got after we employed Backward elimination. 
+
+Since, we were limited by our hardware for doing Bayesian Bodelling, I have decided to perform backward step AIC elimination for comparison.
+
+
+```{r}
+initial_model<-lm(log(price)~area+Neighborhood+Overall.Qual+Overall.Cond+Year.Built+Bedroom.AbvGr+TotRms.AbvGrd,data = ames_train)
+initial_model_AIC<-step(initial_model)
+summary(initial_model_AIC)
+```
+
+We can see that with AIC elimination method, we arrived at the same model with area, neighbourhood,Overall.Qual,Overall.Cond,Year.Built and Bedroom.AbvGr as the predictor variables.
+
+So, this is consistent across all modelling techniques.
 
 * * *
 
@@ -197,8 +211,25 @@ One way to assess the performance of a model is to examine the model's residuals
 
 NOTE: Write your written response to section 2.3 here. Delete this note before you submit your work.
 
+In the previous section, we arrived at the same model with all 3 modelling techniques. I have picked AIC model randomly for the residuals plot
+
 ```{r model_resid}
+plot(initial_model_AIC,which=1)
 ```
+
+We can see that there are three outliers with this model. Row 428,276,310
+
+If we check these values and the Estimated Price of these houses based on our model
+
+```{r}
+kable(ames_train[c(428,276,310),])
+estimated_price<-as.data.frame(exp(initial_model_AIC$fitted.values[c(428,276,310)]))
+colnames(estimated_price)<-"Estimated_Price"
+kable(estimated_price)
+```
+
+For row 428, the outlier makes sense as the sale condition is abnormal. Also, there is no centraliized air conditioning system
+
 
 * * *
 
